@@ -14,7 +14,7 @@ def read(fname):
         file = open(fullpath, "wb")
         file.write(unziped)
         file.close()
-    elif re.match(r".mgh", fname):
+    elif re.match(r"(.+).mgh", fname):
         fullpath = fname
     else:
         raise Exception("Cannot read file except ones named *.mgz or *.mgh")
