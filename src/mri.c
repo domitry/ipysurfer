@@ -23,8 +23,8 @@ void swap_byte(void* val, int num){
 static PyObject* read_mgh_(const char* fname){
   FILE *fp;
   MGH_HEADER *header = (MGH_HEADER*)malloc(sizeof(MGH_HEADER));
-  int dtype, nframes, depth, height, width, area;
-  int f, z, i;
+  int dtype, nframes, depth, height, width;
+  int i;
   npy_intp dims[4];
   size_t size;
 
@@ -86,25 +86,20 @@ static PyObject* read_mgh_(const char* fname){
   }
 
   mri = (uchar *)malloc(size*nframes*depth*width*height);
-  area = width*height;
 
-  for(f=0; f<nframes; f++){
-    for(z=0; z<depth; z++){
-      uchar *start = mri + f*(depth*area*size) + z*area*size;
-      if(fread(start, size, area, fp) < area){
-        PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
-        return NULL;
-      }
-      if(big_end)
-        for(i=0; i<area; i++)
-          swap_byte((start + size*i), size);
-    }
+  if(fread(mri, size, nframes*depth*width*height, fp) < nframes*depth*width*height){
+    PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
+    return NULL;
   }
+
+  if(big_end)
+    for(i=0; i<nframes*depth*width*height; i++)
+      swap_byte(mri + size*i, size);
 
   dims[0] = nframes;
   dims[1] = depth;
-  dims[3] = height;
-  dims[2] = width;
+  dims[2] = height;
+  dims[3] = width;
   
   obj = PyArray_SimpleNewFromData(4, dims, dtype, mri);
 
