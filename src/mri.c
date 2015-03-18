@@ -4,18 +4,32 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "mri.h"
+
+// num: byte num
+void swap_byte(void* val, int num){
+  int i;
+  unsigned char *p = (unsigned char *)val;
+  for(i=0;i<num/2;i++){
+    unsigned char a = *(p+i);
+    *(p+i) = *(p+(num-i-1));
+    *(p+(num-i-1)) = a;
+  }
+}
 
 // internal use
 static PyObject* read_mgh_(const char* fname){
   FILE *fp;
   MGH_HEADER *header = (MGH_HEADER*)malloc(sizeof(MGH_HEADER));
-  int nvvoxel, dtype;
+  int dtype, nframes, depth, height, width, area;
+  int f, z, i;
   npy_intp dims[4];
-  size_t err;
+  size_t size;
 
-  void *mri;
+  bool big_end = false;
+  uchar *mri;
   PyObject* obj;
 
   if((fp = fopen(fname, "rb")) == NULL){
@@ -28,36 +42,41 @@ static PyObject* read_mgh_(const char* fname){
     return NULL;
   };
 
-  nvvoxel = header->width * header->height * header->depth * header->nframes;
-  dims[0] = header->nframes;
-  dims[1] = header->depth;
-  dims[2] = header->height;
-  dims[3] = header->width;
+  if(header->version != 1){
+    big_end = true;
+    swap_byte(&(header->type), 4);
+    swap_byte(&(header->nframes), 4);
+    swap_byte(&(header->depth), 4);
+    swap_byte(&(header->height), 4);
+    swap_byte(&(header->width), 4);
+  }
+
+  nframes = header->nframes;
+  depth = header->depth;
+  height = header->height;
+  width = header->width;
+
+  printf("%d", header->type);
 
   switch(header->type){
   case MRI_UCHAR:
-    mri = malloc(sizeof(uchar)*nvvoxel);
-    err = fread(mri, sizeof(uchar), nvvoxel, fp);
+    size = sizeof(uchar);
     dtype = NPY_INT8;
     break;
   case MRI_INT:
-    mri = malloc(sizeof(int)*nvvoxel);
-    err = fread(mri, sizeof(int), nvvoxel, fp);
+    size = sizeof(int);
     dtype = NPY_INT;
     break;
   case MRI_LONG:
-    mri = malloc(sizeof(long)*nvvoxel);
-    err = fread(mri, sizeof(long), nvvoxel, fp);
+    size = sizeof(long);
     dtype = NPY_LONG;
     break;
   case MRI_FLOAT:
-    mri = malloc(sizeof(float)*nvvoxel);
-    err = fread(mri, sizeof(float), nvvoxel, fp);
+    size = sizeof(float);
     dtype = NPY_FLOAT;
     break;
   case MRI_SHORT:
-    mri = malloc(sizeof(short)*nvvoxel);
-    err = fread(mri, sizeof(short), nvvoxel, fp);
+    size = sizeof(short);
     dtype = NPY_SHORT;
     break;
   case MRI_BITMAP:
@@ -66,10 +85,26 @@ static PyObject* read_mgh_(const char* fname){
     return NULL;
   }
 
-  if(err < nvvoxel){
-    PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
-    return NULL;
+  mri = (uchar *)malloc(size*nframes*depth*width*height);
+  area = width*height;
+
+  for(f=0; f<nframes; f++){
+    for(z=0; z<depth; z++){
+      uchar *start = mri + f*(depth*area*size) + z*area*size;
+      if(fread(start, size, area, fp) < area){
+        PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
+        return NULL;
+      }
+      if(big_end)
+        for(i=0; i<area; i++)
+          swap_byte((start + size*i), size);
+    }
   }
+
+  dims[0] = nframes;
+  dims[1] = depth;
+  dims[3] = height;
+  dims[2] = width;
   
   obj = PyArray_SimpleNewFromData(4, dims, dtype, mri);
 

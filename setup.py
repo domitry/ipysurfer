@@ -9,5 +9,8 @@ loader = Extension('mghloader',
 setup (name = 'IPySurfer',
        version = '1.0',
        description = 'MRI visualizer on IPython notebook',
-       ext_modules = [loader]
+       author="Naoki Nishida",
+       author_email="domitry@gmail.com",
+       ext_modules = [loader],
+       packages = ["ipysurfer"]
 )

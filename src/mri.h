@@ -6,12 +6,11 @@ typedef struct __attribute__ ((packed)){
   int nframes;
   int type;
   int dof;
-  int goodRASFlag;
-  int spacingX;
+  short goodRASFlag;
   float delta[3];
   float Mdc[9];
   float Pxyz_c[3];
-  unsigned char padding[256-4*15];
+  unsigned char padding[256-4*15+2];
 }MGH_HEADER;
 
 typedef unsigned char uchar;
