@@ -20,11 +20,11 @@ void swap_byte(void* val, int num){
 }
 
 // internal use
-static PyObject* read_mgh_(const char* fname){
+static PyObject* read_mgh_(const char* fname, int start, int end){
   FILE *fp;
   MGH_HEADER *header = (MGH_HEADER*)malloc(sizeof(MGH_HEADER));
   int dtype, nframes, depth, height, width;
-  int i;
+  int i, j;
   npy_intp dims[4];
   size_t size;
 
@@ -56,12 +56,10 @@ static PyObject* read_mgh_(const char* fname){
   height = header->height;
   width = header->width;
 
-  printf("%d", header->type);
-
   switch(header->type){
   case MRI_UCHAR:
     size = sizeof(uchar);
-    dtype = NPY_INT8;
+    dtype = NPY_UINT8;
     break;
   case MRI_INT:
     size = sizeof(int);
@@ -85,18 +83,34 @@ static PyObject* read_mgh_(const char* fname){
     return NULL;
   }
 
-  mri = (uchar *)malloc(size*nframes*depth*width*height);
+  mri = (uchar *)malloc(size*(end-start+1)*depth*width*height);
 
-  if(fread(mri, size, nframes*depth*width*height, fp) < nframes*depth*width*height){
-    PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
+  if(start > end || end > nframes-1){
+    PyErr_SetString(PyExc_Exception, "Invalid arguments \"start\" and \"end\".");
     return NULL;
   }
 
+  uchar *seek = mri;
+  for(i=start; i<=end; i++){
+    printf("hoge");
+    for(j=0; j<depth; j++){
+      printf("nya");
+      if(fread(seek, size, width*height, fp) < width*height){
+        PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
+        return NULL;
+      }
+      seek += size*width*height;
+    }
+    seek += size*depth*width*height;
+  }
+
+  printf("test: %d", *((int*)(mri+256*256)));
+
   if(big_end)
-    for(i=0; i<nframes*depth*width*height; i++)
+    for(i=0; i<(end-start+1)*depth*width*height; i++)
       swap_byte(mri + size*i, size);
 
-  dims[0] = nframes;
+  dims[0] = end-start+1;
   dims[1] = depth;
   dims[2] = height;
   dims[3] = width;
@@ -113,8 +127,9 @@ static PyObject* read_mgh_(const char* fname){
 //
 static PyObject* read_mgh(PyObject *self, PyObject *args){
   const char *fname;
-  PyArg_ParseTuple(args, "s", &fname);
-  return read_mgh_(fname);
+  int start, end;
+  PyArg_ParseTuple(args, "sii", &fname, &start, &end);
+  return read_mgh_(fname, start, end);
 }
 
 //TODO: Accept #if #else and enable to be executed on Python3

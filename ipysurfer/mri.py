@@ -4,7 +4,7 @@ import mghloader
 
 class MRI():
     @classmethod
-    def from_mgz(cls, fname):
+    def from_mgz(cls, fname, start=0, end=0):
         """
         Initialize MRI from .mgh or .mgz file
         ==Arguments==
@@ -17,12 +17,12 @@ class MRI():
             file = open(fullpath, "wb")
             file.write(unziped)
             file.close()
-        elif re.match(r"(.+).mgh", fname):
+        elif re.match(r"(.+).mgh", start, end):
             fullpath = fname
         else:
             raise Exception("Cannot read file except ones named *.mgz or *.mgh")
 
-        arr = mghloader.read(fullpath)
+        arr = mghloader.read(fullpath, start, end)
         return cls(arr)
 
     def __init__(self, arr):
@@ -33,13 +33,16 @@ class MRI():
         self.height = shape[2]
         self.width = shape[3]
 
-    def show(self, frame_num=0):
+    def show(self, frame_num=0, depth=None):
         """
         Show the specified frame as 2D heatmap plot.
         """
         import matplotlib.pyplot as plt
         frame = self.data[frame_num]
-        img = frame.reshape([self.depth*self.height, self.width])
+        if depth is None:
+            img = frame.reshape([self.depth*self.height, self.width])
+        else:
+            img = frame[depth]
         plt.imshow(img, cmap=plt.cm.gray)
 
     def plot(self, config):
