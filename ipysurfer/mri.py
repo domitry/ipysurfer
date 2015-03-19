@@ -33,5 +33,21 @@ class MRI():
         self.height = shape[2]
         self.width = shape[3]
 
-    def plot(self):
-        return
+
+    def plot(self, config):
+        """
+        Plot MRI Image using volume rendering.
+        ===Arguments===
+        config: dict
+        """
+        from jinja2 import Template
+        from IPython.core.display import display, HTML
+
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "templates/vis.html"))
+        template = Template(open(path).read())
+
+        html = template.render(**{
+            "div_id": "vis" + str(uuid.uuid4())
+        })
+
+        display(HTML(html))
