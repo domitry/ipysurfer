@@ -33,6 +33,14 @@ class MRI():
         self.height = shape[2]
         self.width = shape[3]
 
+    def show(self, frame_num=0):
+        """
+        Show the specified frame as 2D heatmap plot.
+        """
+        import matplotlib.pyplot as plt
+        frame = self.data[frame_num]
+        img = frame.reshape([self.depth*self.height, self.width])
+        plt.imshow(img, cmap=plt.cm.gray)
 
     def plot(self, config):
         """
