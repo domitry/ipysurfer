@@ -1,0 +1,100 @@
+<html>
+  <head>
+    <script type="text/javascript">
+     if(window['THREE'] === undefined)
+       require.config({
+         paths: {
+           THREE: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min"
+         }
+       });
+
+     require(["THREE"], function(THREE){
+       function init(){
+         var config = _.extend({
+           width: 500,
+           height: 500,
+           div_id: "",
+           CAM_FOV: 45,
+           CAM_NEAR: 1,
+           CAM_FAR: 200,
+           FOG_NEAR: 1,
+           FOG_FAR: 20
+         }, {{config}});
+
+         var div = $("#" + config.div_id);
+
+         var renderer = (function(){
+           var r = new THREE.WebGLRenderer({
+             clearAlpha: 1,
+             clearColor: 0x000000,
+             antialias: true
+           });
+           r.setSize(config.width, config.height);
+           _.extend(r, {
+             autoClear: false,
+             sortObjects: false
+           });
+           return r;
+         })();
+
+         var camera = (function(){
+           var c = new THREE.PerspectiveCamera(
+             config.CAM_FOV,
+             config.width/config.height,
+             config.CAM_NEAR,
+             config.CAM_FAR
+           );
+           c.position.set(0, 0, -3);
+           c.lookAt(new THREE.Vector3());
+           return c;
+         })();
+
+         var controls = (function(){
+           var c = new THREE.TrackballControls(camera, div.get(0));
+           _.extend(c, {
+             rotateSpeed: 1.0,
+             zoomSpeed: 1.2,
+             panSpeed: 1.0,
+             dynamicDampingFactor: 0.3,
+             staticMoving: false,
+             noZoom: false,
+             noPan: false
+           });
+           return c;
+         })();
+
+         var cube = (function(){
+           var shader = new THREE.ShaderMaterial({
+             uniforms: {},
+             vertexShader: "",
+             fragmentShader: "",
+             depthWrite: false
+           });
+
+           return new THREE.Mesh(
+             new THREE.CubeGeometry(1.0, 1.0, 1.0),
+             shader
+           );
+         })();
+
+         scene.add(cube);
+
+         div.style({
+           width: config.width,
+           height: config.height
+         }).append(renderer.domElement);
+       };
+
+       function update(){
+         
+       }
+
+       init();
+       update();
+     });
+    </script>
+  </head>
+  <body>
+    <div id="{{div_id}}"></div>
+  </body>
+</html>
