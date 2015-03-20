@@ -1,97 +1,200 @@
 <html>
   <head>
     <script type="text/javascript">
-     if(window['THREE'] === undefined)
+     (function(){
        require.config({
          paths: {
-           THREE: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min"
+           Three: "http://cdnjs.cloudflare.com/ajax/libs/three.js/r49/Three.min"
+         },
+         shim: {
+           exports: {
+             Three: "THREE"
+           }
          }
        });
 
-     require(["THREE"], function(THREE){
-       function init(){
-         var config = _.extend({
-           width: 500,
-           height: 500,
-           div_id: "",
-           CAM_FOV: 45,
-           CAM_NEAR: 1,
-           CAM_FAR: 200,
-           FOG_NEAR: 1,
-           FOG_FAR: 20
-         }, {{config}});
+       require(["Three"], function(){
+         var global = {
+           div: null,
+           renderer: null,
+           camera: null,
+           controls: null,
+           scene: null
+         };
 
-         var div = $("#" + config.div_id);
+         function init(){
+           var config = _.extend({
+             width: 500,
+             height: 500,
+             voltex_size: {depth: 0, width: 0, height: 0},
+             div_id: "{{div_id}}",
+             CAM_FOV: 45,
+             CAM_NEAR: 1,
+             CAM_FAR: 200,
+             FOG_NEAR: 1,
+             FOG_FAR: 20
+           }, {{config}});
 
-         var renderer = (function(){
-           var r = new THREE.WebGLRenderer({
-             clearAlpha: 1,
-             clearColor: 0x000000,
-             antialias: true
-           });
-           r.setSize(config.width, config.height);
-           _.extend(r, {
-             autoClear: false,
-             sortObjects: false
-           });
-           return r;
-         })();
+           global.div = $("#" + config.div_id);
 
-         var camera = (function(){
-           var c = new THREE.PerspectiveCamera(
-             config.CAM_FOV,
-             config.width/config.height,
-             config.CAM_NEAR,
-             config.CAM_FAR
+           global.renderer = (function(){
+             var r = new THREE.WebGLRenderer({
+               clearAlpha: 1,
+               clearColor: 0x000000,
+               antialias: true
+             });
+             r.setSize(config.width, config.height);
+             _.extend(r, {
+               autoClear: false,
+               sortObjects: false
+             });
+             return r;
+           })();
+
+           global.camera = (function(){
+             var c = new THREE.PerspectiveCamera(
+               config.CAM_FOV,
+               config.width/config.height,
+               config.CAM_NEAR,
+               config.CAM_FAR
+             );
+             c.position.set(0, 0, -3);
+             c.lookAt(new THREE.Vector3());
+             return c;
+           })();
+
+           global.scene = (function(){
+             var scene = new THREE.Scene();
+             scene.add(global.camera);
+
+             var texture = (function(){
+               var image = document.createElement("img");
+               var voltex = new THREE.Texture(image);
+
+               image.onload = function(){
+                 voltex.needsUpdate=true;
+               };
+               //image.src = "{{encoded_png}}";
+               voltex.minFilter = voltex.magFilter = THREE.LinearFilter;
+               voltex.wrapS = voltex.wrapT = THREE.ClampToEdgeWrapping;
+               return voltex;
+             })();
+
+             var lights = (function(){
+               var pos_arr = [], col_arr = [];
+
+               var addLight = function(pos, col){
+                 var light;
+                 light = new THREE.PointLight();
+                 light.position.set( pos.x, pos.y, pos.z );
+                 light.color.setRGB( col.x, col.y, col.z );
+                 scene.add( light );
+                 
+                 // add geometry
+                 var mat = new THREE.MeshBasicMaterial();
+                 mat.color = light.color;
+                 var shape = new THREE.Mesh(
+                   new THREE.SphereGeometry( 0.1, 8, 8 ),
+                   mat
+                 );
+                 shape.position = light.position;
+                 scene.add(shape);
+                 
+                 pos_arr.push(light.position);
+                 col_arr.push(col);
+               };
+
+               addLight(new THREE.Vector3(2, 2, 1), new THREE.Vector3(1.0, 0.9, 0.8));
+               addLight(new THREE.Vector3(-2, 1, -3), new THREE.Vector3(0.6, 0.1, 0.0));
+
+               return {
+                 pos: pos_arr,
+                 col: col_arr
+               };
+             })();
+
+             var uniforms = (function(){
+               var size = config.voltex_size;
+               var voltexDim = new THREE.Vector3(size.width, size.height, size.depth);
+
+               return {
+                 uCamPos: {type: "v3", value: global.camera.position},
+                 uLightP: {type: "v3v", value: lights.pos},
+                 uLightC: {type: "v3v", value: lights.col},
+                 uColor:  {type: "v3", value: new THREE.Vector3(1.0, 1.0, 1.0)},
+                 uTex:    {type: "t", value: 0, texture: texture},
+                 uTexDim: {type: "v3", value: voltexDim},
+                 uOffset: {type: "v3", value: new THREE.Vector3(0, 0, 0)},
+                 uTMK:    {type: "f", value: 16.0}
+               };
+             })();
+
+             var cube = (function(){
+               var load = function(url){
+                 var result;
+                 $.ajax({
+                   url:      url,
+                   type:     "GET",
+                   async:    false,
+                   dataType: "text",
+                   success:  function(data) {
+                     result = data;
+                   }
+                 });
+                 return result;
+               };
+
+               var shader = new THREE.ShaderMaterial({
+                 uniforms: uniforms,
+                 vertexShader: load("https://cdn.rawgit.com/nopjia/WebGL-Volumetric/master/shaders/vol-vs.glsl"),
+                 fragmentShader: load("https://cdn.rawgit.com/nopjia/WebGL-Volumetric/master/shaders/vol-fs.glsl"),
+                 depthWrite: false
+               });
+
+               return new THREE.Mesh(
+                 new THREE.CubeGeometry(1.0, 1.0, 1.0),
+                 shader
+               );
+             })();
+
+             scene.add(cube);
+
+             return scene;
+           })();
+           
+           global.controls = (function(){
+             var c = new THREE.TrackballControls(global.camera, global.div.get(0));
+             _.extend(c, {
+               rotateSpeed: 1.0,
+               zoomSpeed: 1.2,
+               panSpeed: 1.0,
+               dynamicDampingFactor: 0.3,
+               staticMoving: false,
+               noZoom: false,
+               noPan: false
+             });
+             return c;
+           })();
+
+           global.div.css({
+             width: config.width,
+             height: config.height
+           }).append(global.renderer.domElement);
+         };
+
+         function update(){
+           global.controls.update();
+           global.renderer.clear();
+           global.renderer.render(
+             global.scene, global.camera
            );
-           c.position.set(0, 0, -3);
-           c.lookAt(new THREE.Vector3());
-           return c;
-         })();
+           window.requestAnimationFrame(update);
+         }
 
-         var controls = (function(){
-           var c = new THREE.TrackballControls(camera, div.get(0));
-           _.extend(c, {
-             rotateSpeed: 1.0,
-             zoomSpeed: 1.2,
-             panSpeed: 1.0,
-             dynamicDampingFactor: 0.3,
-             staticMoving: false,
-             noZoom: false,
-             noPan: false
-           });
-           return c;
-         })();
-
-         var cube = (function(){
-           var shader = new THREE.ShaderMaterial({
-             uniforms: {},
-             vertexShader: "",
-             fragmentShader: "",
-             depthWrite: false
-           });
-
-           return new THREE.Mesh(
-             new THREE.CubeGeometry(1.0, 1.0, 1.0),
-             shader
-           );
-         })();
-
-         scene.add(cube);
-
-         div.style({
-           width: config.width,
-           height: config.height
-         }).append(renderer.domElement);
-       };
-
-       function update(){
-         
-       }
-
-       init();
-       update();
-     });
+         init();
+         update();
+       });
+     })();
     </script>
   </head>
   <body>
