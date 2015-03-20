@@ -45,7 +45,32 @@ class MRI():
             img = frame[depth]
         plt.imshow(img, cmap=plt.cm.gray)
 
-    def plot(self, config):
+    def to_png(self, fp, resize=True, frame=0):
+        """
+        Save MRI image as png
+        """
+        from PIL import Image
+
+        if resize:
+            arr = self.data[frame][::2, :, :].reshape([(self.depth/2)*self.height, self.width])
+            image = Image.fromarray(arr, "L").resize((self.width/2, (self.height*self.depth)/4))
+            image.save(fp, "PNG")
+            return {
+                "width": self.width/2,
+                "height": self.height/2,
+                "depth": self.depth/2
+            }
+        else:
+            arr = self.data[frame].reshape([self.depth*self.height, self.width])
+            image = Image.fromarray(arr, "L")
+            image.save(fp, "PNG")
+            return {
+                "width": self.width,
+                "height": self.height,
+                "depth": self.depth
+            }
+
+    def plot(self, config={}):
         """
         Plot MRI Image using volume rendering.
         ===Arguments===
