@@ -33,16 +33,21 @@ class MRI():
         self.height = shape[2]
         self.width = shape[3]
 
-    def show(self, frame_num=0, depth=None):
+    def show(self, num=0, section="z", frame_num=0):
         """
         Show the specified frame as 2D heatmap plot.
         """
         import matplotlib.pyplot as plt
         frame = self.data[frame_num]
-        if depth is None:
-            img = frame.reshape([self.depth*self.height, self.width])
+        if section=="z":
+            img = frame[num, :, :]
+        elif section=="y":
+            img = frame[:, num, :]
+        elif section=="x":
+            img = frame[:, :, num]
         else:
-            img = frame[depth]
+            raise Exception("Section should be specified by \"x\", \"y\", \"z\"")
+            
         plt.imshow(img, cmap=plt.cm.gray)
 
     def to_png(self, fp, resize=True, frame=0):
