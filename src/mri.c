@@ -92,9 +92,7 @@ static PyObject* read_mgh_(const char* fname, int start, int end){
 
   uchar *seek = mri;
   for(i=start; i<=end; i++){
-    printf("hoge");
     for(j=0; j<depth; j++){
-      printf("nya");
       if(fread(seek, size, width*height, fp) < width*height){
         PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
         return NULL;
