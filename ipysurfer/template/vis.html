@@ -4,7 +4,8 @@
      (function(){
        require.config({
          paths: {
-           Three: "http://cdnjs.cloudflare.com/ajax/libs/three.js/r49/Three.min"
+           Three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r49/Three.min",
+           underscore: "http://underscorejs.org/underscore"
          },
          shim: {
            exports: {
@@ -13,7 +14,7 @@
          }
        });
 
-       require(["Three"], function(){
+       require(["Three", "underscore"], function(tmp, _){
          var global = {
            div: null,
            renderer: null,
@@ -44,10 +45,8 @@
                antialias: true
              });
              r.setSize(config.width, config.height);
-             _.extend(r, {
-               autoClear: false,
-               sortObjects: false
-             });
+             r.autoClear = false;
+             r.sortObjects = false;
              return r;
            })();
 
@@ -67,14 +66,19 @@
              var scene = new THREE.Scene();
              scene.add(global.camera);
 
+             scene.fog = new THREE.Fog( 0x000000, 1, 20);
+
              var texture = (function(){
+               var voltex = THREE.ImageUtils.loadTexture("https://dl.dropboxusercontent.com/u/47978121/nya.png");
+/*
                var image = document.createElement("img");
                var voltex = new THREE.Texture(image);
 
                image.onload = function(){
                  voltex.needsUpdate=true;
                };
-               //image.src = "{{encoded_png}}";
+               //image.src = "encoded_png";
+*/
                voltex.minFilter = voltex.magFilter = THREE.LinearFilter;
                voltex.wrapS = voltex.wrapT = THREE.ClampToEdgeWrapping;
                return voltex;
@@ -104,7 +108,7 @@
                  col_arr.push(col);
                };
 
-               addLight(new THREE.Vector3(2, 2, 1), new THREE.Vector3(1.0, 0.9, 0.8));
+               addLight(new THREE.Vector3(100, 2, 1), new THREE.Vector3(1.0, 0.9, 0.8));
                addLight(new THREE.Vector3(-2, 1, -3), new THREE.Vector3(0.6, 0.1, 0.0));
 
                return {
@@ -117,16 +121,20 @@
                var size = config.voltex_size;
                var voltexDim = new THREE.Vector3(size.width, size.height, size.depth);
 
-               return {
+               var ret = {
                  uCamPos: {type: "v3", value: global.camera.position},
                  uLightP: {type: "v3v", value: lights.pos},
                  uLightC: {type: "v3v", value: lights.col},
                  uColor:  {type: "v3", value: new THREE.Vector3(1.0, 1.0, 1.0)},
                  uTex:    {type: "t", value: 0, texture: texture},
                  uTexDim: {type: "v3", value: voltexDim},
-                 uOffset: {type: "v3", value: new THREE.Vector3(0, 0, 0)},
+                 uOffset: {type: "v3", value: new THREE.Vector3()},
                  uTMK:    {type: "f", value: 16.0}
                };
+
+               console.log(ret);
+
+               return ret;
              })();
 
              var cube = (function(){
@@ -146,13 +154,14 @@
 
                var shader = new THREE.ShaderMaterial({
                  uniforms: uniforms,
-                 vertexShader: load("https://cdn.rawgit.com/nopjia/WebGL-Volumetric/master/shaders/vol-vs.glsl"),
-                 fragmentShader: load("https://cdn.rawgit.com/nopjia/WebGL-Volumetric/master/shaders/vol-fs.glsl"),
+                 vertexShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-vs.glsl"),
+                 fragmentShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-fs.glsl"),
                  depthWrite: false
                });
 
                return new THREE.Mesh(
                  new THREE.CubeGeometry(1.0, 1.0, 1.0),
+                 //new THREE.MeshLambertMaterial("#ff0000")
                  shader
                );
              })();
@@ -193,6 +202,7 @@
 
          init();
          update();
+         
        });
      })();
     </script>

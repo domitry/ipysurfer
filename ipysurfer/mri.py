@@ -90,7 +90,7 @@ class MRI():
         size = self.to_png(f)
         f.seek(0)
         png = "data:image/png;base64," + b64encode(f.read())
-        config.update({"size": size})
+        config.update({"voltex_size": size})
 
         html = template.render(**{
             "div_id": "vis" + str(uuid4()),
