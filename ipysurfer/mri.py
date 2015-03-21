@@ -56,18 +56,18 @@ class MRI():
             image = Image.fromarray(arr, "L").resize((self.width/2, (self.height*self.depth)/4))
             image.save(fp, "PNG")
             return {
-                "width": self.width/2,
-                "height": self.height/2,
-                "depth": self.depth/2
+                "width": int(self.width/2),
+                "height": int(self.height/2),
+                "depth": int(self.depth/2)
             }
         else:
             arr = self.data[frame].reshape([self.depth*self.height, self.width])
             image = Image.fromarray(arr, "L")
             image.save(fp, "PNG")
             return {
-                "width": self.width,
-                "height": self.height,
-                "depth": self.depth
+                "width": int(self.width),
+                "height": int(self.height),
+                "depth": int(self.depth)
             }
 
     def plot(self, config={}):
