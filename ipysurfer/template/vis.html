@@ -69,16 +69,14 @@
              scene.fog = new THREE.Fog( 0x000000, 1, 20);
 
              var texture = (function(){
-               var voltex = THREE.ImageUtils.loadTexture("https://dl.dropboxusercontent.com/u/47978121/nya.png");
-/*
                var image = document.createElement("img");
                var voltex = new THREE.Texture(image);
 
                image.onload = function(){
                  voltex.needsUpdate=true;
                };
-               //image.src = "encoded_png";
-*/
+               image.src = "{{encoded_png}}";
+
                voltex.minFilter = voltex.magFilter = THREE.LinearFilter;
                voltex.wrapS = voltex.wrapT = THREE.ClampToEdgeWrapping;
                return voltex;
@@ -161,7 +159,6 @@
 
                return new THREE.Mesh(
                  new THREE.CubeGeometry(1.0, 1.0, 1.0),
-                 //new THREE.MeshLambertMaterial("#ff0000")
                  shader
                );
              })();
