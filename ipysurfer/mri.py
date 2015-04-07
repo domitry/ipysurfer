@@ -102,4 +102,8 @@ class CategorizedMRI(MRI):
         mri.register_label(label)
         return mri
 
+    def show(self, num=0):
+        import matplotlib.pyplot as plt
+        arr = self.replaced[num]
+        plt.imshow(arr)
 
