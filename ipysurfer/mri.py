@@ -2,7 +2,7 @@ import os, re, gzip
 import numpy
 import mghloader
 
-class MRI():
+class MRI(object):
     @classmethod
     def from_mgz(cls, fname, start=0, end=0):
         """
