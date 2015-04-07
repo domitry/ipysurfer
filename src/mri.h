@@ -10,7 +10,7 @@ typedef struct __attribute__ ((packed)){
   float delta[3];
   float Mdc[9];
   float Pxyz_c[3];
-  unsigned char padding[256-4*15+2-4];
+  unsigned char padding[256-4*15+2-4+2];
 }MGH_HEADER;
 
 typedef unsigned char uchar;
