@@ -58,23 +58,23 @@ static PyObject* read_mgh_(const char* fname, int start, int end){
 
   switch(header->type){
   case MRI_UCHAR:
-    size = sizeof(uchar);
+    size = 1;
     dtype = NPY_UINT8;
     break;
   case MRI_INT:
-    size = sizeof(int);
-    dtype = NPY_INT;
+    size = 4;
+    dtype = NPY_UINT;
     break;
   case MRI_LONG:
-    size = sizeof(long);
+    size = 8;
     dtype = NPY_LONG;
     break;
   case MRI_FLOAT:
-    size = sizeof(float);
+    size = 4;
     dtype = NPY_FLOAT;
     break;
   case MRI_SHORT:
-    size = sizeof(short);
+    size = 2;
     dtype = NPY_SHORT;
     break;
   case MRI_BITMAP:
