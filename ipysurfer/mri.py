@@ -71,30 +71,6 @@ class RawMRI(MRI):
             
         plt.imshow(img, cmap=plt.cm.gray)
 
-    def to_png(self, fp, resize=True, frame=0):
-        """
-        Save MRI image as png
-        """
-        from PIL import Image
-
-        if resize:
-            arr = self.data[frame][::2, :, :].reshape([(self.depth/2)*self.height, self.width])
-            image = Image.fromarray(arr, "L").resize((self.width/2, (self.height*self.depth)/4))
-            image.save(fp, "PNG")
-            return {
-                "width": int(self.width/2),
-                "height": int(self.height/2),
-                "depth": int(self.depth/2)
-            }
-        else:
-            arr = self.data[frame].reshape([self.depth*self.height, self.width])
-            image = Image.fromarray(arr, "L")
-            image.save(fp, "PNG")
-            return {
-                "width": int(self.width),
-                "height": int(self.height),
-                "depth": int(self.depth)
-            }
 class CategorizedMRI(MRI):
     @classmethod
     def from_mgz(cls, fname, label, start=0, end=0):
@@ -107,3 +83,48 @@ class CategorizedMRI(MRI):
         arr = self.replaced[num]
         plt.imshow(arr)
 
+    def to_png(self, fp, filter=False):
+        from PIL import Image, ImageFilter
+        from math import sqrt
+
+        sq_dep = sqrt(self.depth)
+        width = self.width
+        height = self.height
+        depth = self.depth
+
+        arr = self.replaced.reshape((depth*height, width, 3))
+        new_arr = numpy.empty((width*sq_dep, height*sq_dep, 3), dtype=numpy.uint8)
+
+        for h in range(0, int(sq_dep)):
+            for w in range(0, int(sq_dep)):
+                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(sq_dep*h+w)*height : (sq_dep*h+w+1)*height, :]
+
+        img = Image.fromarray(new_arr, "RGB")
+
+        if filter == True:
+            img = img.filter(ImageFilter.SMOOTH)
+
+        img.save(fp, "PNG")
+
+    def register_label(self, fname, frame=0):
+        txt = open(fname)
+        rule = {}
+        for row in txt:
+            # number, name, R, G, B, A
+            m = re.match(r"(\d+)\s+([0-9a-zA-Z\_\-]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d)", row)
+            if m is not None:
+                g = m.groups()
+                rule[int(g[0])] = (g[1], numpy.array([int(v) for v in g[2:5]], dtype=numpy.uint8))
+
+        arr = numpy.empty(self.data.shape[1:]+(3,), dtype=numpy.uint8)
+        rule_alive = {}
+
+        for x in range(0, self.width):
+            for y in range(0, self.height):
+                for z in range(0, self.depth):
+                    region = self.data[frame, z, y, x]
+                    arr[z, y, x] = rule[region][1]
+                    rule_alive[region]= rule[region]
+
+        self.replaced = arr
+        self.label = rule_alive
