@@ -75,32 +75,3 @@ class MRI():
                 "depth": int(self.depth)
             }
 
-    def plot(self, config={}):
-        """
-        Plot MRI Image using volume rendering.
-        ===Arguments===
-        config: dict
-        """
-        from jinja2 import Template
-        from IPython.core.display import display, HTML
-        from tempfile import TemporaryFile
-        from base64 import b64encode
-        from uuid import uuid4
-
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "template/vis.html"))
-        template = Template(open(path).read())
-
-        # encode png as base64
-        f = TemporaryFile("r+b")
-        size = self.to_png(f)
-        f.seek(0)
-        png = "data:image/png;base64," + b64encode(f.read())
-        config.update({"voltex_size": size})
-
-        html = template.render(**{
-            "div_id": "vis" + str(uuid4()),
-            "encoded_png": png,
-            "config": config
-        })
-
-        display(HTML(html))
