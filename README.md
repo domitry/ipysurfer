@@ -1,7 +1,21 @@
-# ipysurfer
+# IPysurfer
 FreeSurfer visualizer on IPython notebook
 
-![](http://i.gyazo.com/ab4d1bca45882bb7166bf7e0e544821c.png)
+![](http://i.gyazo.com/ed2e81c7e54e17728969a5a45400200e.png)
 
-# notebooks:
-[sample1](http://nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/mri.ipynb)
+## Installation
+```
+python setup.py install
+```
+
+## Usage
+```python
+from ipysurfer import mri
+m = mri.from_mgz("path_to_mgz")
+m.show(100) # show 100th slice
+m.plot() # show 3D brain
+```
+
+## Examples:
+* [sample1](http://nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/mri.ipynb)
+* [sample2](nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/Categorized_MRI.ipynb)
