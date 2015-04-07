@@ -95,4 +95,11 @@ class RawMRI(MRI):
                 "height": int(self.height),
                 "depth": int(self.depth)
             }
+class CategorizedMRI(MRI):
+    @classmethod
+    def from_mgz(cls, fname, label, start=0, end=0):
+        mri = super(CategorizedMRI, cls).from_mgz(fname, start, end)
+        mri.register_label(label)
+        return mri
+
 
