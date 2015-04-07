@@ -33,6 +33,27 @@ class MRI(object):
         self.height = shape[2]
         self.width = shape[3]
 
+class RawMRI(MRI):
+    def to_png(self, fp):
+        from PIL import Image, ImageFilter
+        from math import sqrt
+
+        sq_dep = sqrt(self.depth)
+        width = self.width
+        height = self.height
+        depth = self.depth
+
+        arr = self.replaced.reshape((depth*height, width))
+        new_arr = numpy.empty((width*sq_dep, height*sq_dep), dtype=numpy.uint8)
+
+        for h in range(0, int(sq_dep)):
+            for w in range(0, int(sq_dep)):
+                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(sq_dep*h+w)*height : (sq_dep*h+w+1)*height, :]
+
+        img = Image.fromarray(new_arr, "L")
+
+        img.save(fp, "PNG")
+
     def show(self, num=0, section="z", frame_num=0):
         """
         Show the specified frame as 2D heatmap plot.
