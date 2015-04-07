@@ -1,5 +1,36 @@
 <html>
   <head>
+    <style type="text/css">
+     .webgl-container{
+       display:table;
+     }
+
+     .webgl{
+       display:table-cell;
+     }
+
+     .control{
+       padding: 10px;
+       display:table-cell;
+       vertical-align:top;
+     }
+
+     .row{
+       display: table-row;
+     }
+
+     .content{
+       padding: 5px;
+       display:table-cell;
+       vertical-align:middle;
+     }
+
+     .control_label{
+       width: 6em;
+       display:table-cell;
+       vertical-align:middle;
+     }
+    </style>
     <script type="text/javascript">
      (function(){
        require.config({
@@ -15,15 +46,9 @@
        });
 
        require(["Three", "underscore"], function(tmp, _){
-         var global = {
-           div: null,
-           renderer: null,
-           camera: null,
-           controls: null,
-           scene: null
-         };
+         var global = {};
 
-         function init(){
+         function init_webgl(){
            var config = _.extend({
              width: 500,
              height: 500,
@@ -36,7 +61,7 @@
              FOG_FAR: 20
            }, {{config}});
 
-           global.div = $("#" + config.div_id);
+           global.div = $("#" + config.div_id).find(".webgl");
 
            global.renderer = (function(){
              var r = new THREE.WebGLRenderer({
@@ -177,6 +202,50 @@
            }).append(global.renderer.domElement);
          };
 
+         function init_control(){
+           var div = $("#" + "{{div_id}}").find(".control");
+
+           var render = function(){
+             console.log("re-rendering...");
+             global.shader.uniforms = global.uniforms;
+             global.shader.needsUpdate = true;
+           };
+
+           // [[name, color], [name, color], ...]
+           var labels = {{label}};
+           _.each(labels, function(row){
+             div.find(".brain-areas")
+                .append("<option>" + row[0] + "</option>");
+           });
+
+           div.find(".frame_check")
+              .click(function(){
+                global.uniforms.frame.value = (!global.uniforms.frame.value ? 1 : 0);
+              });
+
+           // selection area
+           div.find(".brain-areas")
+              .change(function(){
+                var i = $(this).prop("selectedIndex");
+                global.uniforms.displayColor.value = (function(){
+                  var vec = new THREE.Vector3();
+                  vec.set.apply(vec, _.map(labels[i][1], function(val){
+                    return val/255;
+                  }));
+                  console.log(vec);
+                  return vec;
+                })();
+              });
+
+           // radio button
+           _.each([[".raw", ".categorized"], [".categorized", ".raw"]], function(pair){
+             div.find(pair[0])
+                .click(function(){
+                  div.find(pair[1]).attr("checked", !($(this).prop("checked")));
+                });
+           });
+         }
+
          function update(){
            global.controls.update();
            global.renderer.clear();
@@ -186,14 +255,46 @@
            window.requestAnimationFrame(update);
          }
 
-         init();
+         init_webgl();
+         init_control();
          update();
-         
        });
      })();
     </script>
   </head>
   <body>
-    <div id="{{div_id}}"></div>
+    <div class="webgl-container" id="{{div_id}}">
+      <div class="webgl"></div>
+      <div class="control">
+        <form>
+          <div class ="row">
+            <div class="control_label">
+              Mode:
+            </div>
+            <div class="content">
+              <input class="raw" type="radio" checked="checked">raw
+              <input class="categorized" type="radio">categorized
+            </div>
+          </div>
+          <div class ="row">
+            <div class="control_label">
+              Area: 
+            </div>
+            <div class="content">
+              <select class="brain-areas">
+              </select><br>
+            </div>
+          </div>
+          <div class="row">
+            <div class="control_label">
+              Frame:
+            </div>
+            <div class="content">
+              <input type="checkbox" class="frame_check" checked="checked">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
   </body>
 </html>
