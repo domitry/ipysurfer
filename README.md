@@ -21,4 +21,6 @@ m.plot() # show 3D brain
 * [sample2](nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/Categorized_MRI.ipynb)
 
 ## License
-This repository contains by [Nop Jiarathanakul]()
+This software is distributed under the MIT License.
+
+IPysurfer contains some code from [WebGL-Volumetric](https://github.com/nopjia/WebGL-Volumetric), an wonderful WebGL-based visualizer created by Nop Jiarathanakul.
