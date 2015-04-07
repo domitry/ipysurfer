@@ -24,7 +24,7 @@ static PyObject* read_mgh_(const char* fname, int start, int end){
   FILE *fp;
   MGH_HEADER *header = (MGH_HEADER*)malloc(sizeof(MGH_HEADER));
   int dtype, nframes, depth, height, width;
-  int i, j;
+  int i, j, k;
   npy_intp dims[4];
   size_t size;
 
@@ -97,16 +97,17 @@ static PyObject* read_mgh_(const char* fname, int start, int end){
         PyErr_SetString(PyExc_Exception, "voxel data reading failed.");
         return NULL;
       }
+
+      if(big_end)
+          for(k=0; k<width*height; k++){
+              if(*(int*)(seek+k*size) != 0){
+                  swap_byte(seek+k*size, size);
+              }
+          }
       seek += size*width*height;
     }
     seek += size*depth*width*height;
   }
-
-  printf("test: %d", *((int*)(mri+256*256)));
-
-  if(big_end)
-    for(i=0; i<(end-start+1)*depth*width*height; i++)
-      swap_byte(mri + size*i, size);
 
   dims[0] = end-start+1;
   dims[1] = depth;
