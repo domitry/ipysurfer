@@ -62,11 +62,25 @@
              return c;
            })();
 
-           global.scene = (function(){
-             var scene = new THREE.Scene();
-             scene.add(global.camera);
+           var load = function(url){
+             var result;
+             $.ajax({
+               url:      url,
+               type:     "GET",
+               async:    false,
+               dataType: "text",
+               success:  function(data) {
+                 result = data;
+               }
+             });
+             return result;
+           };
 
-             scene.fog = new THREE.Fog( 0x000000, 1, 20);
+           global.uniforms = (function(){
+             var size = config.voltex_size;
+             var voltexDim = new THREE.Vector3(size.width, size.height, size.depth);
+             var f_per_row = size.frames_per_row;
+             var f_per_column = size.frames_per_column;
 
              var texture = (function(){
                var image = document.createElement("img");
@@ -82,6 +96,33 @@
                return voltex;
              })();
 
+             return {
+               uCamPos: {type: "v3", value: global.camera.position},
+               uColor:  {type: "v3", value: new THREE.Vector3(1.0, 1.0, 1.0)},
+               uTex:    {type: "t", value: 0, texture: texture},
+               uTexDim: {type: "v3", value: voltexDim},
+               fPerRow: {type: "f", value: f_per_row},
+               fPerColumn: {type: "f", value: f_per_column},
+               uOffset: {type: "v3", value: new THREE.Vector3()},
+               uTMK:    {type: "f", value: 16.0},
+               frame: {type: "i", value: 1}, // whether to show frame
+               mode: {type: "i", value: 1},
+               displayColor: {type: "v3", value: new THREE.Vector3(0.0)} // color to display.
+             };
+           })();
+
+           global.shader = new THREE.ShaderMaterial({
+             uniforms: global.uniforms,
+             vertexShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-vs.glsl"),
+             fragmentShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-fs-color.glsl"),
+             depthWrite: false
+           });
+
+           global.scene = (function(){
+             var scene = new THREE.Scene();
+             scene.add(global.camera);
+             scene.fog = new THREE.Fog( 0x000000, 1, 20);
+
              var lights = (function(){
                var pos_arr = [], col_arr = [];
 
@@ -91,17 +132,6 @@
                  light.position.set( pos.x, pos.y, pos.z );
                  light.color.setRGB( col.x, col.y, col.z );
                  scene.add( light );
-                 
-                 // add geometry
-                 var mat = new THREE.MeshBasicMaterial();
-                 mat.color = light.color;
-                 var shape = new THREE.Mesh(
-                   new THREE.SphereGeometry( 0.1, 8, 8 ),
-                   mat
-                 );
-                 shape.position = light.position;
-                 scene.add(shape);
-                 
                  pos_arr.push(light.position);
                  col_arr.push(col);
                };
@@ -115,51 +145,10 @@
                };
              })();
 
-             var uniforms = (function(){
-               var size = config.voltex_size;
-               var voltexDim = new THREE.Vector3(size.width, size.height, size.depth);
-
-               var ret = {
-                 uCamPos: {type: "v3", value: global.camera.position},
-                 uLightP: {type: "v3v", value: lights.pos},
-                 uLightC: {type: "v3v", value: lights.col},
-                 uColor:  {type: "v3", value: new THREE.Vector3(1.0, 1.0, 1.0)},
-                 uTex:    {type: "t", value: 0, texture: texture},
-                 uTexDim: {type: "v3", value: voltexDim},
-                 uOffset: {type: "v3", value: new THREE.Vector3()},
-                 uTMK:    {type: "f", value: 16.0}
-               };
-
-               console.log(ret);
-
-               return ret;
-             })();
-
              var cube = (function(){
-               var load = function(url){
-                 var result;
-                 $.ajax({
-                   url:      url,
-                   type:     "GET",
-                   async:    false,
-                   dataType: "text",
-                   success:  function(data) {
-                     result = data;
-                   }
-                 });
-                 return result;
-               };
-
-               var shader = new THREE.ShaderMaterial({
-                 uniforms: uniforms,
-                 vertexShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-vs.glsl"),
-                 fragmentShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-fs.glsl"),
-                 depthWrite: false
-               });
-
                return new THREE.Mesh(
                  new THREE.CubeGeometry(1.0, 1.0, 1.0),
-                 shader
+                 global.shader
                );
              })();
 
