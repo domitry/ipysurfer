@@ -106,7 +106,6 @@ static PyObject* read_mgh_(const char* fname, int start, int end){
           }
       seek += size*width*height;
     }
-    seek += size*depth*width*height;
   }
 
   dims[0] = end-start+1;
