@@ -1,6 +1,7 @@
 import os, re, gzip
 import numpy
 import mghloader
+from math import sqrt
 
 class __MRI__(object):
     """
@@ -42,7 +43,6 @@ class MRI(__MRI__):
     """
     def to_png(self, fp):
         from PIL import Image, ImageFilter
-        from math import sqrt
 
         sq_dep = sqrt(self.depth)
         width = self.width
@@ -57,7 +57,6 @@ class MRI(__MRI__):
                 new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(sq_dep*h+w)*height : (sq_dep*h+w+1)*height, :]
 
         img = Image.fromarray(new_arr, "L")
-
         img.save(fp, "PNG")
 
     def show(self, num=0, section="z", frame_num=0):
@@ -94,7 +93,6 @@ class CategorizedMRI(__MRI__):
 
     def to_png(self, fp, filter=False):
         from PIL import Image, ImageFilter
-        from math import sqrt
 
         sq_dep = sqrt(self.depth)
         width = self.width
