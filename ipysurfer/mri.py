@@ -3,6 +3,9 @@ import numpy
 import mghloader
 
 class __MRI__(object):
+    """
+    Root class for MRI and CategorizedMRI
+    """
     @classmethod
     def from_mgz(cls, fname, start=0, end=0):
         """
@@ -34,6 +37,9 @@ class __MRI__(object):
         self.width = shape[3]
 
 class MRI(__MRI__):
+    """
+    The wrapper for mgh/mgz files packed by FreeSurfer
+    """
     def to_png(self, fp):
         from PIL import Image, ImageFilter
         from math import sqrt
@@ -72,6 +78,9 @@ class MRI(__MRI__):
         plt.imshow(img, cmap=plt.cm.gray)
 
 class CategorizedMRI(__MRI__):
+    """
+    The wrapper for mgh or mgz files labeled by FreeSurfer
+    """
     @classmethod
     def from_mgz(cls, fname, label, start=0, end=0):
         mri = super(CategorizedMRI, cls).from_mgz(fname, start, end)
