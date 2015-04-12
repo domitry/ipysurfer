@@ -91,6 +91,10 @@ static PyObject* read_mgh_(const char* fname, int start, int end){
   }
 
   uchar *seek = mri;
+
+  for(i=0; i<start; i++)
+    fseek(fp, size*width*height,SEEK_CUR);
+
   for(i=start; i<=end; i++){
     for(j=0; j<depth; j++){
       if(fread(seek, size, width*height, fp) < width*height){
