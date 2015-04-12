@@ -2,7 +2,7 @@ import os, re, gzip
 import numpy
 import mghloader
 
-class MRI(object):
+class __MRI__(object):
     @classmethod
     def from_mgz(cls, fname, start=0, end=0):
         """
@@ -33,7 +33,7 @@ class MRI(object):
         self.height = shape[2]
         self.width = shape[3]
 
-class RawMRI(MRI):
+class MRI(__MRI__):
     def to_png(self, fp):
         from PIL import Image, ImageFilter
         from math import sqrt
@@ -71,7 +71,7 @@ class RawMRI(MRI):
             
         plt.imshow(img, cmap=plt.cm.gray)
 
-class CategorizedMRI(MRI):
+class CategorizedMRI(__MRI__):
     @classmethod
     def from_mgz(cls, fname, label, start=0, end=0):
         mri = super(CategorizedMRI, cls).from_mgz(fname, start, end)
