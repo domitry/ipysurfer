@@ -49,7 +49,7 @@ class MRI(__MRI__):
         height = self.height
         depth = self.depth
 
-        arr = self.replaced.reshape((depth*height, width))
+        arr = self.data.reshape((depth*height, width))
         new_arr = numpy.empty((width*sq_dep, height*sq_dep), dtype=numpy.uint8)
 
         for h in range(0, int(sq_dep)):
