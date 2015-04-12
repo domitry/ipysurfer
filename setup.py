@@ -12,5 +12,6 @@ setup (name = 'IPySurfer',
        author="Naoki Nishida",
        author_email="domitry@gmail.com",
        ext_modules = [loader],
-       packages = ["ipysurfer"]
+       packages = ["ipysurfer"],
+       package_data = {"ipysurfer":["template/*.html"]}
 )
