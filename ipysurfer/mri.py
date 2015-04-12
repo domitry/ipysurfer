@@ -37,23 +37,34 @@ class __MRI__(object):
         self.height = shape[2]
         self.width = shape[3]
 
+    def fold(self):
+        i = ceil(sqrt(self.depth))
+        while self.depth%i:
+            i-=1
+        f_per_row, f_per_column = i, self.depth/i
+
+        try:
+            depth, height, width = self.data.shape[1:]
+            arr = self.data.reshape((depth*height, width))
+            new_arr = numpy.empty((height*f_per_column, width*f_per_row), dtype=self.data.dtype)
+        except ValueError:
+            depth, height, width, channel = self.data.shape[1:]
+            arr = self.data.reshape((depth*height, width, channel))
+            new_arr = numpy.empty((height*f_per_column, width*f_per_row, channel), dtype=self.data.dtype)
+
+        for h in range(0, int(f_per_column)):
+            for w in range(0, int(f_per_row)):
+                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(f_per_row*h+w)*height : (f_per_row*h+w+1)*height]
+
+        return new_arr
+
 class MRI(__MRI__):
     """
     The wrapper for mgh/mgz files packed by FreeSurfer
     """
     def to_png(self, fp):
         from PIL import Image, ImageFilter
-
-        sq_dep = sqrt(self.depth)
-        width = self.width
-        height = self.height
-        depth = self.depth
-
-        i = ceil(sqrt(depth))
-        while depth%i:
-            i-=1
-        arr = self.fold(i, depth/i)
-
+        arr = self.fold()
         img = Image.fromarray(arr, "L")
         img.save(fp, "PNG")
 
@@ -73,18 +84,6 @@ class MRI(__MRI__):
             raise Exception("Section should be specified by \"x\", \"y\", \"z\"")
         
         plt.imshow(img, cmap=plt.cm.gray)
-
-    def fold(self, f_per_row, f_per_column, dtype=numpy.uint8):
-        depth, height, width = self.data.shape[1:]
-
-        arr = self.data.reshape((depth*height, width))
-        new_arr = numpy.empty((height*f_per_column, width*f_per_row), dtype=dtype)
-
-        for h in range(0, int(f_per_column)):
-            for w in range(0, int(f_per_row)):
-                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(f_per_row*h+w)*height : (f_per_row*h+w+1)*height]
-
-        return new_arr
 
     def plot(self, config={}):
         """
@@ -136,25 +135,13 @@ class CategorizedMRI(__MRI__):
 
     def show(self, num=0):
         import matplotlib.pyplot as plt
-        arr = self.replaced[num]
+        arr = self.data[num]
         plt.imshow(arr)
 
     def to_png(self, fp, filter=False):
         from PIL import Image, ImageFilter
-
-        sq_dep = sqrt(self.depth)
-        width = self.width
-        height = self.height
-        depth = self.depth
-
-        arr = self.replaced.reshape((depth*height, width, 3))
-        new_arr = numpy.empty((width*sq_dep, height*sq_dep, 3), dtype=numpy.uint8)
-
-        for h in range(0, int(sq_dep)):
-            for w in range(0, int(sq_dep)):
-                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(sq_dep*h+w)*height : (sq_dep*h+w+1)*height, :]
-
-        img = Image.fromarray(new_arr, "RGB")
+        arr = self.fold()
+        img = Image.fromarray(arr, "RGB")
 
         if filter == True:
             img = img.filter(ImageFilter.SMOOTH)
@@ -181,5 +168,5 @@ class CategorizedMRI(__MRI__):
                     arr[z, y, x] = rule[region][1]
                     rule_alive[region]= rule[region]
 
-        self.replaced = arr
+        self.data = arr
         self.label = rule_alive
