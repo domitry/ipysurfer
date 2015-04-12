@@ -22,7 +22,6 @@ precision highp float;
 // 32 48 64 96 128
 #define MAX_STEPS 64
 
-#define LIGHT_NUM 2
 //#define uTMK 20.0
 #define TM_MIN 0.05
 
@@ -40,18 +39,19 @@ uniform vec3 uOffset; // TESTDEBUG
 
 uniform vec3 uCamPos;
 
-uniform vec3 uLightP[LIGHT_NUM];  // point lights
-uniform vec3 uLightC[LIGHT_NUM];
-
 uniform vec3 uColor;      // color of volume
 uniform sampler2D uTex;   // 3D(2D) volume texture
 uniform vec3 uTexDim;     // dimensions of texture
+
+uniform float fPerRow;
+uniform float fPerColumn;
 
 uniform float uTMK;
 
 float gStepSize;
 float gStepFactor;
 
+uniform int frame;
 
 //---------------------------------------------------------
 // PROGRAM
@@ -63,72 +63,39 @@ vec3 toLocal(vec3 p) {
 }
 
 float sampleVolTex(vec3 pos) {
-    pos = pos + uOffset; // TESTDEBUG
+  pos = pos + uOffset; // TESTDEBUG
   
-    // note: z is up in 3D tex coords, pos.z is tex.y, pos.y is zSlice
-    float zSlice = (1.0-pos.y)*(uTexDim.z-1.0);   // float value of slice number, slice 0th to 63rd
-  
-    // calc pixels from top of texture
-    float fromTopPixels =
-        floor(zSlice)*uTexDim.y +   // offset pix from top of tex, from upper slice  
-        pos.z*(uTexDim.y-1.0) +     // y pos in pixels, range 0th to 63rd pix
-        0.5;  // offset to center of cell
-    
-    // calc y tex coords of two slices
-    float y0 = min( (fromTopPixels)/(uTexDim.y*uTexDim.z), 1.0);
-    float y1 = min( (fromTopPixels+uTexDim.y)/(uTexDim.y*uTexDim.z), 1.0);
-    
-    // get (bi)linear interped texture reads at two slices
-    float z0 = texture2D(uTex, vec2(pos.x, y0)).g;
-    float z1 = texture2D(uTex, vec2(pos.x, y1)).g;
-  
-    // lerp them again (thus trilinear), using remaining fraction of zSlice
-    return mix(z0, z1, fract(zSlice));
-}
+  // note: z is up in 3D tex coords, pos.z is tex.y, pos.y is zSlice
+  float zSlice = (1.0-pos.y)*(uTexDim.z-1.0);   // float value of slice number, slice 0th to 63rd
 
-// accumulate density by ray marching
-float getDensity(vec3 ro, vec3 rd) {
-    vec3 step = rd*gStepSize;
-    vec3 pos = ro;
-  
-    float density = 0.0;
-  
-    for (int i=0; i<MAX_STEPS; ++i) {
-        density += (1.0-density) * sampleVolTex(pos) * gStepFactor;
-        //density += sampleVolTex(pos);
-    
-        pos += step;
-    
-        if (density > 0.95 ||
-            pos.x > 1.0 || pos.x < 0.0 ||
-            pos.y > 1.0 || pos.y < 0.0 ||
-            pos.z > 1.0 || pos.z < 0.0)
-            break;
-    }
-  
-    return density;
-}
+  float x0 = mod(floor(zSlice), fPerRow)*uTexDim.x +
+      pos.x*(uTexDim.x-1.0) +
+      0.5;
 
-// calc transmittance
-float getTransmittance(vec3 ro, vec3 rd) {
-    vec3 step = rd*gStepSize;
-    vec3 pos = ro;
-  
-    float tm = 1.0;
-  
-    for (int i=0; i<MAX_STEPS; ++i) {
-        tm *= exp( -uTMK*gStepSize*sampleVolTex(pos) );
-    
-        pos += step;
-    
-        if (tm < TM_MIN ||
-            pos.x > 1.0 || pos.x < 0.0 ||
-            pos.y > 1.0 || pos.y < 0.0 ||
-            pos.z > 1.0 || pos.z < 0.0)
-            break;
-    }
-  
-    return tm;
+  float y0 = floor(floor(zSlice)/fPerRow)*uTexDim.y +
+      pos.z*(uTexDim.y-1.0) +
+      0.5;
+
+  float width = uTexDim.x*fPerRow;
+  float height = uTexDim.y*fPerColumn;
+
+  float uni_x0 = min(x0/width, 1.0);
+  float uni_y0 = min(y0/height, 1.0);
+  float uni_x1;
+  float uni_y1;
+
+  if(mod(floor(zSlice)+1.0, fPerRow) == 0.0){
+      uni_x1 = min((pos.x*(uTexDim.x-1.0) + 0.5)/width, 1.0);
+      uni_y1 = min((y0 + uTexDim.y)/height, 1.0);
+  }else{
+      uni_x1 = min((x0 + uTexDim.x)/width, 1.0);
+      uni_y1 = uni_y0;
+  }
+
+  // get (bi)linear interped texture reads at two slices
+  float z0 = texture2D(uTex, vec2(uni_x0, uni_y0)).g;
+  float z1 = texture2D(uTex, vec2(uni_x1, uni_y1)).g;
+  return mix(z0, z1, fract(zSlice));
 }
 
 vec4 raymarchNoLight(vec3 ro, vec3 rd) {
@@ -157,39 +124,6 @@ vec4 raymarchNoLight(vec3 ro, vec3 rd) {
     return vec4(col/alpha, alpha);
 }
 
-vec4 raymarchLight(vec3 ro, vec3 rd) {
-    vec3 step = rd*gStepSize;
-    vec3 pos = ro;
-  
-  
-    vec3 col = vec3(0.0);   // accumulated color
-    float tm = 1.0;         // accumulated transmittance
-  
-    for (int i=0; i<MAX_STEPS; ++i) {
-        // delta transmittance 
-        float dtm = exp( -uTMK*gStepSize*sampleVolTex(pos) );
-        tm *= dtm;
-    
-        // get contribution per light
-        for (int k=0; k<LIGHT_NUM; ++k) {
-            vec3 ld = normalize( toLocal(uLightP[k])-pos );
-            float ltm = getTransmittance(pos,ld);
-      
-            col += (1.0-dtm) * uColor*uLightC[k] * tm * ltm;
-        }
-    
-        pos += step;
-    
-        if (tm < TM_MIN ||
-            pos.x > 1.0 || pos.x < 0.0 ||
-            pos.y > 1.0 || pos.y < 0.0 ||
-            pos.z > 1.0 || pos.z < 0.0)
-            break;
-    }
-  
-    float alpha = 1.0-tm;
-    return vec4(col/alpha, alpha);
-}
 
 void main() {
     // in world coords, just for now
@@ -201,10 +135,14 @@ void main() {
     gStepSize = ROOTTHREE / float(MAX_STEPS);
     gStepFactor = 32.0 * gStepSize;
   
-    //gl_FragColor = raymarchLight(ro, rd);
+  if(
+     frame == 1 &&
+     (abs(length(abs(vPos1.xy) - vec2(0.5))) < 0.01 ||
+      abs(length(abs(vPos1.yz) - vec2(0.5))) < 0.01 ||
+      abs(length(abs(vPos1.xz) - vec2(0.5))) < 0.01 )
+     ){
+    gl_FragColor = vec4(1.0);
+  }else{
     gl_FragColor = raymarchNoLight(ro, rd);
-    //gl_FragColor = vec4(uColor, getDensity(ro,rd));
-    //gl_FragColor = vec4(vec3(sampleVolTex(pos)), 1.0);
-    //gl_FragColor = vec4(vPos1n, 1.0);
-    //gl_FragColor = vec4(uLightP[0], 1.0);
+  }
 }
