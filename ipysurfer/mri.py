@@ -1,7 +1,7 @@
 import os, re, gzip
 import numpy
 import mghloader
-from math import sqrt
+from math import sqrt, ceil
 
 class __MRI__(object):
     """
@@ -49,14 +49,12 @@ class MRI(__MRI__):
         height = self.height
         depth = self.depth
 
-        arr = self.data.reshape((depth*height, width))
-        new_arr = numpy.empty((width*sq_dep, height*sq_dep), dtype=numpy.uint8)
+        i = ceil(sqrt(depth))
+        while depth%i:
+            i-=1
+        arr = self.fold(i, depth/i)
 
-        for h in range(0, int(sq_dep)):
-            for w in range(0, int(sq_dep)):
-                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(sq_dep*h+w)*height : (sq_dep*h+w+1)*height, :]
-
-        img = Image.fromarray(new_arr, "L")
+        img = Image.fromarray(arr, "L")
         img.save(fp, "PNG")
 
     def show(self, num=0, section="z", frame_num=0):
@@ -73,8 +71,20 @@ class MRI(__MRI__):
             img = frame[:, :, num]
         else:
             raise Exception("Section should be specified by \"x\", \"y\", \"z\"")
-            
+        
         plt.imshow(img, cmap=plt.cm.gray)
+
+    def fold(self, f_per_row, f_per_column, dtype=numpy.uint8):
+        depth, height, width = self.data.shape[1:]
+
+        arr = self.data.reshape((depth*height, width))
+        new_arr = numpy.empty((height*f_per_column, width*f_per_row), dtype=dtype)
+
+        for h in range(0, int(f_per_column)):
+            for w in range(0, int(f_per_row)):
+                new_arr[h*height : (h+1)*height, w*width : (w+1)*width] = arr[(f_per_row*h+w)*height : (f_per_row*h+w+1)*height]
+
+        return new_arr
 
     def plot(self, config={}):
         """
