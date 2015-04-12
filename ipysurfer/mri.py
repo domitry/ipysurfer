@@ -178,7 +178,7 @@ class CategorizedMRI(__MRI__):
         from base64 import b64encode
         from uuid import uuid4
 
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "template/vis.html"))
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "template/categorized.html"))
         template = Template(open(path).read())
 
         # encode png as base64

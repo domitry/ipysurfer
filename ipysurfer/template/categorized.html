@@ -236,14 +236,6 @@
                   return vec;
                 })();
               });
-
-           // radio button
-           _.each([[".raw", ".categorized"], [".categorized", ".raw"]], function(pair){
-             div.find(pair[0])
-                .click(function(){
-                  div.find(pair[1]).attr("checked", !($(this).prop("checked")));
-                });
-           });
          }
 
          function update(){
@@ -270,10 +262,6 @@
           <div class ="row">
             <div class="control_label">
               Mode:
-            </div>
-            <div class="content">
-              <input class="raw" type="radio" checked="checked">raw
-              <input class="categorized" type="radio">categorized
             </div>
           </div>
           <div class ="row">
