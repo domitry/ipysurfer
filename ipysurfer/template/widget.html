@@ -1,0 +1,290 @@
+<html>
+  <head>
+    <style type="text/css">
+     .webgl-container{
+       display:table;
+     }
+
+     .webgl{
+       display:table-cell;
+     }
+
+     .control{
+       padding: 10px;
+       display:table-cell;
+       vertical-align:top;
+     }
+
+     .row{
+       display: table-row;
+     }
+
+     .content{
+       padding: 5px;
+       display:table-cell;
+       vertical-align:middle;
+     }
+
+     .control_label{
+       width: 6em;
+       display:table-cell;
+       vertical-align:middle;
+     }
+    </style>
+    <script type="text/javascript">
+     (function(){
+       require.config({
+         paths: {
+           Three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r49/Three.min",
+           underscore: "http://underscorejs.org/underscore"
+         },
+         shim: {
+           exports: {
+             Three: "THREE"
+           }
+         }
+       });
+
+       require(["Three", "underscore"], function(tmp, _){
+         var global = {};
+	 window.global = global;
+
+         function init_webgl(){
+           var config = _.extend({
+             width: 500,
+             height: 500,
+             voltex_size: {depth: 0, width: 0, height: 0},
+             div_id: "{{div_id}}",
+             CAM_FOV: 45,
+             CAM_NEAR: 1,
+             CAM_FAR: 200,
+             FOG_NEAR: 1,
+             FOG_FAR: 20
+           }, {{config}});
+
+           global.div = $("#" + config.div_id).find(".webgl");
+
+           global.renderer = (function(){
+             var r = new THREE.WebGLRenderer({
+               clearAlpha: 1,
+               clearColor: 0x000000,
+               antialias: true
+             });
+             r.setSize(config.width, config.height);
+             r.autoClear = false;
+             r.sortObjects = false;
+             return r;
+           })();
+
+           global.camera = (function(){
+             var c = new THREE.PerspectiveCamera(
+               config.CAM_FOV,
+               config.width/config.height,
+               config.CAM_NEAR,
+               config.CAM_FAR
+             );
+             c.position.set(0, 0, -3);
+             c.lookAt(new THREE.Vector3());
+             return c;
+           })();
+
+           var load = function(url){
+             var result;
+             $.ajax({
+               url:      url,
+               type:     "GET",
+               async:    false,
+               dataType: "text",
+               success:  function(data) {
+                 result = data;
+               }
+             });
+             return result;
+           };
+
+           global.uniforms = (function(){
+             var size = config.voltex_size;
+             var voltexDim = new THREE.Vector3(size.width, size.height, size.depth);
+             var f_per_row = size.frames_per_row;
+             var f_per_column = size.frames_per_column;
+
+             var texture = (function(){
+               var image = document.createElement("img");
+               var voltex = new THREE.Texture(image);
+
+               image.onload = function(){
+                 voltex.needsUpdate=true;
+               };
+               image.src = "{{encoded_png}}";
+
+               voltex.minFilter = voltex.magFilter = THREE.LinearFilter;
+               voltex.wrapS = voltex.wrapT = THREE.ClampToEdgeWrapping;
+               return voltex;
+             })();
+
+             return {
+               uCamPos: {type: "v3", value: global.camera.position},
+               uColor:  {type: "v3", value: new THREE.Vector3(1.0, 1.0, 1.0)},
+               uTex:    {type: "t", value: 0, texture: texture},
+               uTexDim: {type: "v3", value: voltexDim},
+               fPerRow: {type: "f", value: f_per_row},
+               fPerColumn: {type: "f", value: f_per_column},
+               uOffset: {type: "v3", value: new THREE.Vector3()},
+               uTMK:    {type: "f", value: 16.0},
+               frame: {type: "i", value: 1}, // whether to show frame
+               mode: {type: "i", value: 1},
+               displayColor: {type: "v3", value: new THREE.Vector3(0.0)} // color to display.
+             };
+           })();
+
+           global.shader = new THREE.ShaderMaterial({
+             uniforms: global.uniforms,
+             vertexShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-vs.glsl"),
+             fragmentShader: load("https://dl.dropboxusercontent.com/u/47978121/webgl/vol-fs-color.glsl"),
+             depthWrite: false
+           });
+
+           global.scene = (function(){
+             var scene = new THREE.Scene();
+             scene.add(global.camera);
+             scene.fog = new THREE.Fog( 0x000000, 1, 20);
+
+             var lights = (function(){
+               var pos_arr = [], col_arr = [];
+
+               var addLight = function(pos, col){
+                 var light;
+                 light = new THREE.PointLight();
+                 light.position.set( pos.x, pos.y, pos.z );
+                 light.color.setRGB( col.x, col.y, col.z );
+                 scene.add( light );
+                 pos_arr.push(light.position);
+                 col_arr.push(col);
+               };
+
+               addLight(new THREE.Vector3(100, 2, 1), new THREE.Vector3(1.0, 0.9, 0.8));
+               addLight(new THREE.Vector3(-2, 1, -3), new THREE.Vector3(0.6, 0.1, 0.0));
+
+               return {
+                 pos: pos_arr,
+                 col: col_arr
+               };
+             })();
+
+             var cube = (function(){
+               return new THREE.Mesh(
+                 new THREE.CubeGeometry(1.0, 1.0, 1.0),
+                 global.shader
+               );
+             })();
+
+             scene.add(cube);
+
+             return scene;
+           })();
+           
+           global.controls = (function(){
+             var c = new THREE.TrackballControls(global.camera, global.div.get(0));
+             _.extend(c, {
+               rotateSpeed: 1.0,
+               zoomSpeed: 1.2,
+               panSpeed: 1.0,
+               dynamicDampingFactor: 0.3,
+               staticMoving: false,
+               noZoom: false,
+               noPan: false
+             });
+             return c;
+           })();
+
+           global.div.css({
+             width: config.width,
+             height: config.height
+           }).append(global.renderer.domElement);
+         };
+
+         function init_control(){
+           var div = $("#" + "{{div_id}}").find(".control");
+
+           var render = function(){
+             console.log("re-rendering...");
+             global.shader.uniforms = global.uniforms;
+             global.shader.needsUpdate = true;
+           };
+
+           // [[name, color], [name, color], ...]
+           var labels = {{label}};
+           _.each(labels, function(row){
+             div.find(".brain-areas")
+                .append("<option>" + row[0] + "</option>");
+           });
+
+           div.find(".frame_check")
+              .click(function(){
+                global.uniforms.frame.value = (!global.uniforms.frame.value ? 1 : 0);
+              });
+
+           // selection area
+           div.find(".brain-areas")
+              .change(function(){
+                var i = $(this).prop("selectedIndex");
+                global.uniforms.displayColor.value = (function(){
+                  var vec = new THREE.Vector3();
+                  vec.set.apply(vec, _.map(labels[i][1], function(val){
+                    return val/255;
+                  }));
+                  console.log(vec);
+                  return vec;
+                })();
+              });
+         }
+
+         function update(){
+           global.controls.update();
+           global.renderer.clear();
+           global.renderer.render(
+             global.scene, global.camera
+           );
+           window.requestAnimationFrame(update);
+         }
+
+         init_webgl();
+         init_control();
+
+         update();
+       });
+     })();
+    </script>
+  </head>
+  <body>
+    <div class="webgl-container" id="{{div_id}}">
+      <div class="webgl"></div>
+      <div class="control">
+        <form>
+          <div class ="row">
+            <div class="control_label">
+              Mode:
+            </div>
+          </div>
+          <div class ="row">
+            <div class="control_label">
+              Area: 
+            </div>
+            <div class="content">
+              <select class="brain-areas">
+              </select><br>
+            </div>
+          </div>
+          <div class="row">
+            <div class="control_label">
+              Frame:
+            </div>
+            <div class="content">
+              <input type="checkbox" class="frame_check" checked="checked">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
