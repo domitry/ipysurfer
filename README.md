@@ -17,7 +17,7 @@ m.plot() # show 3D brain
 ```
 
 ## Examples:
-* [sample1](http://nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/mri.ipynb)
+* [sample1](http://nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/RawMRI.ipynb)
 * [sample2](http://nbviewer.ipython.org/urls/dl.dropboxusercontent.com/u/47978121/webgl/Categorized_MRI.ipynb)
 
 ## License
